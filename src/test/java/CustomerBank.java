@@ -15,7 +15,7 @@ public class CustomerBank {
         throw new PendingException();
     }
 
-    @Given("^the users connect to the systems$")
+    @Given("^the users connectToECN to the systems$")
     public void the_users_connect_to_the_systems() throws Throwable {
         // Express the Regexp above with the code you wish you had
         throw new PendingException();

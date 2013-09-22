@@ -1,13 +1,14 @@
-import pricingplatform.actors.Bank;
+import pricingplatform.actors.bank.BankCentricPricingEngine;
+import pricingplatform.actors.bank.BankWithoutPriceGeneration;
 import pricingplatform.actors.Customer;
-import pricingplatform.actors.MarketDataService;import pricingplatform.components.DataNormalization;
-import pricingplatform.components.FIXEngine;
+import pricingplatform.actors.MarketDataService;
 import pricingplatform.actors.MultiBankPlatform;
 import quickfix.*;
 import quickfix.field.*;
 import quickfix.fix44.Logon;
 import quickfix.fix44.NewOrderSingle;
 
+import java.io.IOException;
 import java.sql.*;
 
 public class TestProgram {
@@ -18,22 +19,11 @@ public class TestProgram {
 
     private void run() {
         try {
-            createDB();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-        } catch (SQLException e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-        }
-
-        standUpComponents();
-
-
-        try {
-            fixPlaying();
-        } catch (FieldNotFound fieldNotFound) {
-            fieldNotFound.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-        } catch (InvalidMessage invalidMessage) {
-            invalidMessage.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+//            createDB();
+            standUpComponents();
+//            fixPlaying();
+        } catch (Exception excepton) {
+            excepton.printStackTrace();
         }
     }
 
@@ -42,10 +32,10 @@ public class TestProgram {
         Class.forName(driver);
 
         final String url = "jdbc:derby:memory:testDB;create=true";
-        Connection conn = DriverManager.getConnection(url);
+        final Connection conn = DriverManager.getConnection(url);
 
         final DatabaseMetaData dbmd = conn.getMetaData();
-        ResultSet schemas = dbmd.getSchemas();
+        final ResultSet schemas = dbmd.getSchemas();
         while (schemas.next()) {
             String tableSchema = schemas.getString(1);
             String tableCatalog = schemas.getString(2);
@@ -66,33 +56,9 @@ public class TestProgram {
         while (rs1.next()){
             System.out.println(rs1.getString(2));
         }
+
         stmt.close();
-
         conn.close();
-    }
-
-    private void standUpComponents() {
-
-        final MarketDataService bbg = new MarketDataService("BBG");
-        final MarketDataService reuters = new MarketDataService("Reuters");
-
-        final Bank bank1 = new Bank("Dresdner", new MarketDataService[] {bbg});
-        final Bank bank2 = new Bank("Merrill Lynch", new MarketDataService[] {bbg, reuters} );
-        final Customer customer = new Customer("Hedge Fund");
-
-        final DataNormalization dataNormalization = new DataNormalization();
-        final FIXEngine fixEngine1 = new FIXEngine(dataNormalization);
-        final FIXEngine fixEngine2 = new FIXEngine(dataNormalization);
-        final FIXEngine fixEngine3 = new FIXEngine(dataNormalization);
-        final MultiBankPlatform mbp = new MultiBankPlatform("FXall", new FIXEngine[]{fixEngine1, fixEngine2, fixEngine3});
-
-        bank1.connect(fixEngine1);
-        bank2.connect(fixEngine2);
-        customer.connect(fixEngine3);
-
-        bank1.send("FIX Price");
-        bank2.send("FIX Price");
-        customer.send("RFQ");
     }
 
     private void fixPlaying() throws FieldNotFound, InvalidMessage {
@@ -118,5 +84,28 @@ public class TestProgram {
 //        } catch (SessionNotFound sessionNotFound) {
 //            sessionNotFound.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
 //        }
+    }
+
+    private void standUpComponents() {
+        final MarketDataService bloomberg = new MarketDataService("Bloomberg");
+        final MarketDataService reuters = new MarketDataService("Reuters");
+
+        final MultiBankPlatform mbp = new MultiBankPlatform("FXall");
+
+        final BankWithoutPriceGeneration dresdner = new BankCentricPricingEngine("Dresdner", new MarketDataService[] {bloomberg});
+        dresdner.connectToECN(mbp);
+
+        final BankWithoutPriceGeneration merrill = new BankCentricPricingEngine("MerrillLynch", new MarketDataService[] {bloomberg, reuters});
+        merrill.connectToECN(mbp);
+
+        final Customer customer = new Customer("HedgeFund");
+        customer.connectToECN(mbp);
+        customer.rfq();
+
+        try {
+            System.in.read();
+        } catch (IOException e) {
+            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+        }
     }
 }
