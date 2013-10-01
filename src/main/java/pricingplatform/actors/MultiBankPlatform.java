@@ -7,11 +7,13 @@ import pricingplatform.components.bank.DataNormalization;
 import pricingplatform.components.common.FIXEngine;
 import pricingplatform.components.common.Payload;
 import pricingplatform.components.common.PubSubBus;
+import pricingplatform.services.Endpoints;
 import rx.Subscription;
 import rx.concurrency.Schedulers;
 import rx.util.functions.Action1;
 
 import java.util.HashMap;
+import java.util.UUID;
 
 public class MultiBankPlatform implements ECN {
     private final Logger logger = LoggerFactory.getLogger(MultiBankPlatform.class);
@@ -33,10 +35,10 @@ public class MultiBankPlatform implements ECN {
             this.type = type;
             this.mbpClientName = String.format("%s_%s", name, requester);
             msgBus = new PubSubBus(mbpClientName);
-            engine = new FIXEngine(mbpClientName, msgBus);
-            dataNormalization = new DataNormalization(msgBus);
+            engine = new FIXEngine(mbpClientName, mbpClientName, msgBus);
+            dataNormalization = new DataNormalization(mbpClientName, msgBus);
 
-            sub = msgBus.subscribe(PubSubBus.Normalizer_UpStream_Out).
+            sub = msgBus.subscribe(String.format("%s_%s", mbpClientName, Endpoints.Normalizer_UpStream_Out)).
                     observeOn(Schedulers.threadPoolForComputation()).
                     subscribe(new Action1<Payload>() {
                         public void call(final Payload data) {

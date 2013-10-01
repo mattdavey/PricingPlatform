@@ -17,7 +17,7 @@ public class BankCentricAlgoPricing extends BankWithoutPriceGeneration {
     public BankCentricAlgoPricing(final String name, final MarketDataService[] marketDataProviders) {
         super(name, marketDataProviders);
 
-        algoContainer = new AlgoContainer(new Strategy[] {new BasicStrategy(getMsgBus())});
-        matchingEngine = new MatchingEngine(getMsgBus());
+        algoContainer = new AlgoContainer(marketDataProviders, new Strategy[] {new BasicStrategy(name, getMsgBus())});
+        matchingEngine = new MatchingEngine(name, getMsgBus());
     }
 }

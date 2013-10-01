@@ -13,7 +13,7 @@ public class BankCentricPricingEngine extends BankWithoutPriceGeneration {
     public BankCentricPricingEngine(final String name, final MarketDataService[] marketDataProviders) {
         super(name, marketDataProviders);
 
-        curves = new CurveServer(getMsgBus());
-        pricingEngine = new PricingEngine(getMsgBus(), new PricingModel());
+        curves = new CurveServer(marketDataProviders, getMsgBus());
+        pricingEngine = new PricingEngine(name, marketDataProviders, getMsgBus(), new PricingModel());
     }
 }
