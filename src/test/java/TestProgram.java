@@ -1,15 +1,22 @@
-import pricingplatform.actors.bank.BankCentricPricingEngine;
-import pricingplatform.actors.bank.BankWithoutPriceGeneration;
 import pricingplatform.actors.Customer;
 import pricingplatform.actors.MarketDataService;
 import pricingplatform.actors.MultiBankPlatform;
-import quickfix.*;
+import pricingplatform.actors.bank.BankCentricPricingEngine;
+import pricingplatform.actors.bank.BankWithoutPriceGeneration;
+import pricingplatform.components.common.Payload;
+import quickfix.FieldNotFound;
+import quickfix.InvalidMessage;
+import quickfix.Message;
 import quickfix.field.*;
 import quickfix.fix44.Logon;
 import quickfix.fix44.NewOrderSingle;
+import rx.util.functions.Action1;
 
-import java.io.IOException;
 import java.sql.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import static junit.framework.Assert.assertEquals;
 
 public class TestProgram {
 
@@ -87,6 +94,16 @@ public class TestProgram {
     }
 
     private void standUpComponents() {
+        final CountDownLatch latch = new CountDownLatch(4);
+
+        final Customer customer = new Customer("HedgeFund");
+        customer.getReceivedPayloads().subscribe(new Action1<Payload>() {
+            public void call(Payload payload) {
+                latch.countDown();
+            }
+        });
+
+
         final MarketDataService bloomberg = new MarketDataService("Bloomberg");
         final MarketDataService reuters = new MarketDataService("Reuters");
 
@@ -98,13 +115,13 @@ public class TestProgram {
         final BankWithoutPriceGeneration merrill = new BankCentricPricingEngine("MerrillLynch", new MarketDataService[] {bloomberg, reuters});
         merrill.connectToECN(mbp);
 
-        final Customer customer = new Customer("HedgeFund");
         customer.connectToECN(mbp);
         customer.rfq();
 
         try {
-            System.in.read();
-        } catch (IOException e) {
+            latch.await(5, TimeUnit.SECONDS);
+            assertEquals("Incorrect payloads received by customer", 0, latch.getCount());
+        } catch (InterruptedException e) {
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
         }
     }
