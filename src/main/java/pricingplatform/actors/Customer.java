@@ -11,6 +11,7 @@ import pricingplatform.services.Endpoints;
 import rx.Observable;
 import rx.Subscription;
 import rx.subjects.PublishSubject;
+import rx.subjects.ReplaySubject;
 import rx.util.functions.Action1;
 
 public class Customer implements PriceTaker {
@@ -23,7 +24,7 @@ public class Customer implements PriceTaker {
     private final FIXEngine engine;
     private final Subscription sub;
     private MultiBankPlatform mbp;
-    private final PublishSubject<Payload> receivedPayloads = PublishSubject.create();
+    private final ReplaySubject<Payload> receivedPayloads = ReplaySubject.create();
 
     public Customer(final String name) {
         this.name = name;
