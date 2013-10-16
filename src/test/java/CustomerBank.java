@@ -32,38 +32,40 @@ public class CustomerBank {
     private class ActorActions {
         private String actor;
         private String message;
-        private int messageId;
+        private String parameter;
     }
 
     private class ActionMessage {
         private String actor;
         private String message;
         private int messageCount;
+        private String payload;
     }
 
     private final HashMap<String, Object> actors = new HashMap<String, Object>();
 
     @Given("^the following actors exist and are connected as follows$")
-    public void the_following_actors(DataTable data) throws Throwable {
+    public void the_following_actors(final DataTable data) throws Throwable {
         final List<SystemActors> rows = data.asList(SystemActors.class);
 
         for (final SystemActors actor : rows) {
             Object obj;
-            switch (actor.actor.substring(0,4)) {
-                case "Bank":
+            switch (actor.actor) {
+                case "BankCentricPricingEngine":
+                case "BankCentricAlgoPricing":
                     final Class<?> cls = Class.forName("pricingplatform.actors.bank."+actor.actor);
                     final String[] connections = actor.connection.split(",");
 
-                    final MarketDataService[] params = new MarketDataService[connections.length];
+                    final MarketDataService[] constructorParams = new MarketDataService[connections.length];
                     int i=0;
                     for (final String connect : connections) {
                         final MarketDataService connectToActor = (MarketDataService) actors.get(connect.trim());
-                        params[i++] = connectToActor;
+                        constructorParams[i++] = connectToActor;
                     }
 
-                    obj = cls.getConstructors()[0].newInstance(actor.name, params);
+                    obj = cls.getConstructors()[0].newInstance(actor.name, constructorParams);
                     break;
-                case "Mult":
+                case "MultiBankPlatform":
                     final Class<?> cls2 = Class.forName("pricingplatform.actors."+actor.actor);
                     obj = cls2.getConstructors()[0].newInstance(actor.name);
                     final MultiBankPlatform mbp = (MultiBankPlatform) obj;
@@ -73,7 +75,7 @@ public class CustomerBank {
                         bank.connectToECN(mbp);
                     }
                     break;
-                case "Cust":
+                case "Customer":
                     final Class<?> cls3 = Class.forName("pricingplatform.actors."+actor.actor);
                     obj = cls3.getConstructors()[0].newInstance(actor.name);
                     final MultiBankPlatform mbp2 = (MultiBankPlatform) actors.get(actor.connection);
@@ -95,8 +97,14 @@ public class CustomerBank {
 
         for (final ActorActions actions : rows) {
             final Object actor = actors.get(actions.actor);
-            final Method method = actor.getClass().getMethod(actions.message);
-            method.invoke(actor);
+
+            if (actions.parameter.length() != 0) {
+                final Method method = actor.getClass().getMethod(actions.message, new Class[] {String.class});
+                method.invoke(actor, actions.parameter);
+            } else {
+                final Method method = actor.getClass().getMethod(actions.message);
+                method.invoke(actor);
+            }
         }
     }
 
@@ -106,21 +114,40 @@ public class CustomerBank {
 
         final Subscription[] subscribe = new Subscription[rows.size()];
         final CountDownLatch[] latches = new CountDownLatch[rows.size()];
-        int i=0;
+
+        int rowCount=0;
         for (final ActionMessage message : rows) {
-            final Customer taker = (Customer) actors.get(message.actor);
-            latches[i] = new CountDownLatch(message.messageCount);
-            final CountDownLatch latch = latches[i];
-            subscribe[i++] =taker.getReceivedPayloads().subscribe(new Action1<Payload>() {
+            latches[rowCount] = new CountDownLatch(message.messageCount + 1);
+            final CountDownLatch latch = latches[rowCount];
+            final Customer receiver = (Customer) actors.get(message.actor);
+            final String[] payloads = message.payload.split(",");
+
+            final HashMap<String, String> payloadData = new HashMap<>();
+            if (message.payload.length() > 0) {
+                for (final String item : payloads) {
+                    payloadData.put(item, item);
+                }
+            }
+
+            subscribe[rowCount++] =receiver.getReceivedPayloads().subscribe(new Action1<Payload>() {
                 public void call(final Payload payload) {
-                    latch.countDown();
+                if (payload.getPayloadType() == Payload.PayloadType.valueOf(message.message))
+                    switch (payloadData.size()) {
+                        case 0:
+                            latch.countDown();
+                            break;
+                        default:
+                            if (payloadData.containsValue(payload.getData()))
+                                latch.countDown();
+                            break;
+                    }
                 }
             });
         }
 
-        for (int ii=0; ii < rows.size(); ii++) {
-            latches[ii].await(5, TimeUnit.SECONDS);
-            assertEquals(String.format("%d %s %s", rows.get(ii).messageCount, rows.get(ii).message, rows.get(ii).actor),  0, latches[ii].getCount());
+        for (int checker=0; checker < rows.size(); checker++) {
+            latches[checker].await(5, TimeUnit.SECONDS);
+            assertEquals(String.format("%d %s %s", rows.get(checker).messageCount, rows.get(checker).message, rows.get(checker).actor),  1, latches[checker].getCount());
         }
     }
 }

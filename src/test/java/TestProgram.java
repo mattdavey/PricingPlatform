@@ -103,7 +103,6 @@ public class TestProgram {
             }
         });
 
-
         final MarketDataService bloomberg = new MarketDataService("Bloomberg");
         final MarketDataService reuters = new MarketDataService("Reuters");
 
