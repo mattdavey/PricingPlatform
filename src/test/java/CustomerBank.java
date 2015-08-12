@@ -1,14 +1,11 @@
 import cucumber.annotation.en.Given;
 import cucumber.annotation.en.Then;
 import cucumber.annotation.en.When;
-import cucumber.runtime.PendingException;
 import cucumber.table.DataTable;
-import org.reflections.Reflections;
 import pricingplatform.actors.Customer;
 import pricingplatform.actors.MarketDataService;
 import pricingplatform.actors.MultiBankPlatform;
 import pricingplatform.actors.bank.BankWithoutPriceGeneration;
-import pricingplatform.actors.marketroles.PriceTaker;
 import pricingplatform.components.common.Payload;
 import rx.Subscription;
 import rx.util.functions.Action1;
@@ -16,7 +13,6 @@ import rx.util.functions.Action1;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 

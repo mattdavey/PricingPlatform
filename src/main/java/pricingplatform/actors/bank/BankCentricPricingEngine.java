@@ -1,6 +1,5 @@
 package pricingplatform.actors.bank;
 
-
 import pricingplatform.actors.MarketDataService;
 import pricingplatform.components.bank.CurveServer;
 import pricingplatform.components.bank.PricingEngine;

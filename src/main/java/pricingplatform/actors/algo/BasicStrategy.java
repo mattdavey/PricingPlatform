@@ -10,7 +10,7 @@ import rx.Subscription;
 import rx.concurrency.Schedulers;
 import rx.util.functions.Action1;
 
-public class BasicStrategy implements Strategy {
+public class BasicStrategy implements TradingStrategy {
     private final Logger logger = LoggerFactory.getLogger(BasicStrategy.class);
 
     private final String name;
@@ -23,7 +23,7 @@ public class BasicStrategy implements Strategy {
         this.msgBus = msgBus;
     }
 
-    public void start() {
+    public void execute() {
         marketData = msgBus.subscribe(String.format("%s_%s", name, Endpoints.MarketData)).observeOn(Schedulers.threadPoolForComputation()).subscribe(new Action1<Payload>() {
             public void call(final Payload data) {
                 logger.debug(String.format("Received MarketData %s", data));
