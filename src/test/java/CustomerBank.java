@@ -118,7 +118,7 @@ public class CustomerBank {
             final Customer receiver = (Customer) actors.get(message.actor);
             final String[] payloads = message.payload.split(",");
 
-            final HashMap<String, String> payloadData = new HashMap<>();
+            final HashMap<String, String> payloadData = new HashMap<String, String>();
             if (message.payload.length() > 0) {
                 for (final String item : payloads) {
                     payloadData.put(item, item);
